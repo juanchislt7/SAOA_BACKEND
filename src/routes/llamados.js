@@ -4,7 +4,7 @@ import authMiddleware from '../middlewares/auth.js';
 
 const router = express.Router();
 
-// Aplicar middleware de autenticación a todas las rutas
+// Todas las rutas requieren autenticación
 router.use(authMiddleware);
 
 // Rutas de llamados
@@ -15,7 +15,7 @@ router.put('/:id', llamadoController.update);
 router.delete('/:id', llamadoController.delete);
 
 // Rutas adicionales
-router.get('/cita/:cita_id', llamadoController.getByCita);
+router.get('/cita/:citaId', llamadoController.getByCita);
 router.get('/fecha/:fecha', llamadoController.getByFecha);
 
 export default router;

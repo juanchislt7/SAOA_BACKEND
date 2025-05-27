@@ -1,7 +1,5 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
-import Usuario from './usuario.js';
-import Cita from './cita.js';
 
 const LlamadoTurno = sequelize.define('LlamadoTurno', {
   id: {
@@ -11,19 +9,11 @@ const LlamadoTurno = sequelize.define('LlamadoTurno', {
   },
   cita_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: Cita,
-      key: 'id'
-    }
+    allowNull: false
   },
   usuario_id: {
     type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: Usuario,
-      key: 'id'
-    }
+    allowNull: false
   },
   fecha: {
     type: DataTypes.DATEONLY,
@@ -33,30 +23,18 @@ const LlamadoTurno = sequelize.define('LlamadoTurno', {
     type: DataTypes.TIME,
     allowNull: false
   },
-  tipo_llamado: {
-    type: DataTypes.ENUM('PRIMERO', 'SEGUNDO', 'TERCERO'),
-    allowNull: false
+  estado: {
+    type: DataTypes.ENUM('PENDING', 'COMPLETED', 'CANCELLED'),
+    defaultValue: 'PENDING'
   },
   observaciones: {
-    type: DataTypes.TEXT,
-    allowNull: true
+    type: DataTypes.TEXT
   }
 }, {
   tableName: 'llamados_turno',
   timestamps: true,
   createdAt: 'fecha_creacion',
   updatedAt: 'fecha_actualizacion'
-});
-
-// Definir relaciones
-LlamadoTurno.belongsTo(Usuario, {
-  foreignKey: 'usuario_id',
-  as: 'usuario'
-});
-
-LlamadoTurno.belongsTo(Cita, {
-  foreignKey: 'cita_id',
-  as: 'cita'
 });
 
 export default LlamadoTurno; 

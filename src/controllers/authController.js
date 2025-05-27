@@ -1,45 +1,28 @@
 import jwt from 'jsonwebtoken';
-import Usuario from '../models/usuario.js';
+import bcrypt from 'bcryptjs';
+import { Usuario } from '../models/index.js';
 
-class AuthController {
+const authController = {
   async login(req, res) {
     try {
       const { email, password } = req.body;
 
-      // Validar que se proporcionen las credenciales
-      if (!email || !password) {
-        return res.status(400).json({ error: 'Email y contraseña son requeridos' });
-      }
-
-      // Buscar usuario por email
       const usuario = await Usuario.findOne({ where: { email } });
       if (!usuario) {
         return res.status(401).json({ error: 'Credenciales inválidas' });
       }
 
-      // Verificar si el usuario está activo
-      if (!usuario.activo) {
-        return res.status(401).json({ error: 'Usuario inactivo' });
-      }
-
-      // Verificar contraseña
-      const passwordValido = await usuario.verifyPassword(password);
-      if (!passwordValido) {
+      const isValidPassword = await usuario.verifyPassword(password);
+      if (!isValidPassword) {
         return res.status(401).json({ error: 'Credenciales inválidas' });
       }
 
-      // Generar token JWT
       const token = jwt.sign(
-        { 
-          id: usuario.id,
-          email: usuario.email,
-          rol: usuario.rol 
-        },
+        { id: usuario.id, rol: usuario.rol },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN }
+        { expiresIn: '24h' }
       );
 
-      // Enviar respuesta
       return res.json({
         token,
         usuario: {
@@ -53,7 +36,7 @@ class AuthController {
       console.error('Error en login:', error);
       return res.status(500).json({ error: 'Error en el servidor' });
     }
-  }
+  },
 
   async getProfile(req, res) {
     try {
@@ -70,24 +53,18 @@ class AuthController {
       console.error('Error al obtener perfil:', error);
       return res.status(500).json({ error: 'Error en el servidor' });
     }
-  }
+  },
 
   async changePassword(req, res) {
     try {
       const { currentPassword, newPassword } = req.body;
-      const usuario = await Usuario.findByPk(req.userId);
+      const usuario = await Usuario.findByPk(req.usuario.id);
 
-      if (!usuario) {
-        return res.status(404).json({ error: 'Usuario no encontrado' });
-      }
-
-      // Verificar contraseña actual
-      const passwordValido = await usuario.verifyPassword(currentPassword);
-      if (!passwordValido) {
+      const isValidPassword = await usuario.verifyPassword(currentPassword);
+      if (!isValidPassword) {
         return res.status(401).json({ error: 'Contraseña actual incorrecta' });
       }
 
-      // Actualizar contraseña
       usuario.password = newPassword;
       await usuario.save();
 
@@ -97,6 +74,6 @@ class AuthController {
       return res.status(500).json({ error: 'Error en el servidor' });
     }
   }
-}
+};
 
-export default new AuthController(); 
+export default authController; 

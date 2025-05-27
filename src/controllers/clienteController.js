@@ -1,10 +1,10 @@
 import { Op } from 'sequelize';
-import Cliente from '../models/cliente.js';
+import { Cliente } from '../models/index.js';
 
-class ClienteController {
+const clienteController = {
   async list(req, res) {
     try {
-      const { search, page = 1, limit = 10 } = req.query;
+      const { page = 1, limit = 10, search } = req.query;
       const offset = (page - 1) * limit;
 
       const where = {};
@@ -16,15 +16,15 @@ class ClienteController {
         ];
       }
 
-      const { count, rows: clientes } = await Cliente.findAndCountAll({
+      const { count, rows } = await Cliente.findAndCountAll({
         where,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['nombre', 'ASC']]
+        order: [['createdAt', 'DESC']]
       });
 
       return res.json({
-        data: clientes,
+        data: rows,
         pagination: {
           total: count,
           page: parseInt(page),
@@ -36,139 +36,111 @@ class ClienteController {
       console.error('Error al listar clientes:', error);
       return res.status(500).json({ error: 'Error al listar clientes' });
     }
-  }
+  },
 
   async getById(req, res) {
     try {
-      const cliente = await Cliente.findByPk(req.params.documento);
-      
+      const cliente = await Cliente.findByPk(req.params.id);
       if (!cliente) {
         return res.status(404).json({ error: 'Cliente no encontrado' });
       }
-
       return res.json(cliente);
     } catch (error) {
       console.error('Error al obtener cliente:', error);
       return res.status(500).json({ error: 'Error al obtener cliente' });
     }
-  }
+  },
 
   async create(req, res) {
     try {
-      const {
-        documento,
-        nombre,
-        apellido,
-        email,
-        telefono,
-        direccion,
-        fecha_nacimiento
-      } = req.body;
+      const { nombre, apellido, documento } = req.body;
 
-      // Verificar si ya existe un cliente con ese documento
-      const clienteExistente = await Cliente.findByPk(documento);
-      if (clienteExistente) {
-        return res.status(400).json({ error: 'Ya existe un cliente con ese documento' });
+      const existingCliente = await Cliente.checkExistingDocument(documento);
+      if (existingCliente) {
+        return res.status(400).json({ error: 'El documento ya está registrado' });
       }
 
       const cliente = await Cliente.create({
-        documento,
         nombre,
         apellido,
-        email,
-        telefono,
-        direccion,
-        fecha_nacimiento,
-        activo: true
+        documento
       });
 
-      return res.status(201).json(cliente);
+      return res.status(201).json({
+        message: 'Cliente creado correctamente',
+        cliente
+      });
     } catch (error) {
       console.error('Error al crear cliente:', error);
       return res.status(500).json({ error: 'Error al crear cliente' });
     }
-  }
+  },
 
   async update(req, res) {
     try {
-      const cliente = await Cliente.findByPk(req.params.documento);
-      
+      const { nombre, apellido, documento } = req.body;
+      const cliente = await Cliente.findByPk(req.params.id);
+
       if (!cliente) {
         return res.status(404).json({ error: 'Cliente no encontrado' });
       }
 
-      const {
-        nombre,
-        apellido,
-        email,
-        telefono,
-        direccion,
-        fecha_nacimiento,
-        activo
-      } = req.body;
+      const existingCliente = await Cliente.checkExistingDocument(documento, req.params.id);
+      if (existingCliente) {
+        return res.status(400).json({ error: 'El documento ya está registrado' });
+      }
 
       await cliente.update({
         nombre,
         apellido,
-        email,
-        telefono,
-        direccion,
-        fecha_nacimiento,
-        activo
+        documento
       });
 
-      return res.json(cliente);
+      return res.json({
+        message: 'Cliente actualizado correctamente',
+        cliente
+      });
     } catch (error) {
       console.error('Error al actualizar cliente:', error);
       return res.status(500).json({ error: 'Error al actualizar cliente' });
     }
-  }
+  },
 
   async delete(req, res) {
     try {
-      const cliente = await Cliente.findByPk(req.params.documento);
-      
+      const cliente = await Cliente.findByPk(req.params.id);
       if (!cliente) {
         return res.status(404).json({ error: 'Cliente no encontrado' });
       }
 
-      // En lugar de eliminar físicamente, marcamos como inactivo
       await cliente.update({ activo: false });
-
       return res.json({ message: 'Cliente desactivado correctamente' });
     } catch (error) {
       console.error('Error al desactivar cliente:', error);
       return res.status(500).json({ error: 'Error al desactivar cliente' });
     }
-  }
+  },
 
   async search(req, res) {
     try {
       const { query } = req.query;
-      
-      if (!query) {
-        return res.status(400).json({ error: 'Término de búsqueda requerido' });
-      }
-
       const clientes = await Cliente.findAll({
         where: {
           [Op.or]: [
             { nombre: { [Op.like]: `%${query}%` } },
             { apellido: { [Op.like]: `%${query}%` } },
             { documento: { [Op.like]: `%${query}%` } }
-          ],
-          activo: true
+          ]
         },
-        limit: 10,
-        order: [['nombre', 'ASC']]
+        limit: 10
       });
 
       return res.json(clientes);
     } catch (error) {
-      console.error('Error en búsqueda de clientes:', error);
-      return res.status(500).json({ error: 'Error en la búsqueda' });
+      console.error('Error al buscar clientes:', error);
+      return res.status(500).json({ error: 'Error al buscar clientes' });
     }
   }
-}
+};
 
-export default new ClienteController(); 
+export default clienteController; 

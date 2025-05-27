@@ -1,40 +1,57 @@
-import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import authMiddleware from './middlewares/auth.js';
-import './models/index.js';
-import authRoutes from './routes/auth.js';
-import clientesRoutes from './routes/clientes.js';
-import citasRoutes from './routes/citas.js';
-import asistenciasRoutes from './routes/asistencias.js';
-import llamadosRoutes from './routes/llamados.js';
-import usuariosRoutes from './routes/usuarios.js';
+import dotenv from 'dotenv';
+import { sequelize } from './models/index.js';
 
+// Importar rutas
+import authRoutes from './routes/auth.js';
+import usuarioRoutes from './routes/usuarios.js';
+import clienteRoutes from './routes/clientes.js';
+import citaRoutes from './routes/citas.js';
+import asistenciaRoutes from './routes/asistencias.js';
+import llamadoRoutes from './routes/llamados.js';
+
+// Configuración
+dotenv.config();
 const app = express();
 
-// Configuración básica
+// Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Conexión a la base de datos
-// Rutas públicas
-app.use('/autenticacion', authRoutes);
-
-// Rutas protegidas
-app.use(authMiddleware);
-app.use('/clientes', clientesRoutes);
-app.use('/citas', citasRoutes);
-app.use('/asistencias', asistenciasRoutes);
-app.use('/llamados', llamadosRoutes);
-app.use('/usuarios', usuariosRoutes);
+// Rutas
+app.use('/api/auth', authRoutes);
+app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/clientes', clienteRoutes);
+app.use('/api/citas', citaRoutes);
+app.use('/api/asistencias', asistenciaRoutes);
+app.use('/api/llamados', llamadoRoutes);
 
 // Manejo de errores
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ error: 'Error interno del servidor' });
+  res.status(500).json({
+    error: 'Error interno del servidor',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en puerto ${PORT}`);
+// Ruta no encontrada
+app.use((req, res) => {
+  res.status(404).json({ error: 'Ruta no encontrada' });
 });
+
+// Iniciar servidor
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('Conexión a la base de datos establecida correctamente');
+    console.log(`Servidor corriendo en el puerto ${PORT}`);
+  } catch (error) {
+    console.error('Error al conectar con la base de datos:', error);
+  }
+});
+
+export default app;

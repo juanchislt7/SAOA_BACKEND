@@ -1,113 +1,131 @@
+import { Cita, Cliente } from '../models/index.js';
 import { Op } from 'sequelize';
-import Cita from '../models/cita.js';
-import Cliente from '../models/cliente.js';
 
-class CitaController {
+const citaController = {
   async list(req, res) {
     try {
-      const { fecha, estado, cliente } = req.query;
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
+      const { page = 1, limit = 10, fecha, estado } = req.query;
       const offset = (page - 1) * limit;
 
       const where = {};
-      
       if (fecha) {
-        where.fecha_hora = {
-          [Op.between]: [
-            new Date(`${fecha}T00:00:00`),
-            new Date(`${fecha}T23:59:59`)
-          ]
-        };
+        where.fecha = fecha;
       }
-
       if (estado) {
         where.estado = estado;
       }
 
-      if (cliente) {
-        where.cliente_documento = cliente;
-      }
-
-      const citas = await Cita.findAll({
+      const { count, rows } = await Cita.findAndCountAll({
         where,
-        limit,
-        offset,
-        include: [{ model: Cliente, as: 'cliente' }],
-        order: [['fecha_hora', 'ASC']]
+        include: [{
+          model: Cliente,
+          as: 'cliente',
+          attributes: ['nombre', 'apellido', 'documento']
+        }],
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [['fecha', 'ASC'], ['hora', 'ASC']]
       });
 
-      const total = await Cita.count({ where });
-      const totalPages = Math.ceil(total / limit);
-
       return res.json({
-        data: citas,
+        data: rows,
         pagination: {
-          total,
-          page,
-          limit,
-          totalPages
+          total: count,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: Math.ceil(count / limit)
         }
       });
     } catch (error) {
-      console.error(error);
+      console.error('Error al listar citas:', error);
       return res.status(500).json({ error: 'Error al listar citas' });
     }
-  }
+  },
 
   async getById(req, res) {
     try {
       const cita = await Cita.findByPk(req.params.id, {
-        include: [{ model: Cliente, as: 'cliente' }]
+        include: [{
+          model: Cliente,
+          as: 'cliente',
+          attributes: ['nombre', 'apellido', 'documento']
+        }]
       });
-      
+
       if (!cita) {
         return res.status(404).json({ error: 'Cita no encontrada' });
       }
 
       return res.json(cita);
     } catch (error) {
-      console.error(error);
+      console.error('Error al obtener cita:', error);
       return res.status(500).json({ error: 'Error al obtener cita' });
     }
-  }
+  },
 
   async create(req, res) {
     try {
-      const cliente = await Cliente.findByPk(req.body.cliente_documento);
-      
+      const { cliente_id, fecha, hora } = req.body;
+
+      const cliente = await Cliente.findByPk(cliente_id);
       if (!cliente) {
         return res.status(404).json({ error: 'Cliente no encontrado' });
       }
 
-      const cita = await Cita.create(req.body);
-      return res.status(201).json(cita);
+      const existingCita = await Cita.checkExistingAppointment(fecha, hora);
+      if (existingCita) {
+        return res.status(400).json({ error: 'Ya existe una cita para esta fecha y hora' });
+      }
+
+      const cita = await Cita.create({
+        cliente_id,
+        fecha,
+        hora,
+        estado: 'PENDING'
+      });
+
+      return res.status(201).json({
+        message: 'Cita creada correctamente',
+        cita
+      });
     } catch (error) {
-      console.error(error);
+      console.error('Error al crear cita:', error);
       return res.status(500).json({ error: 'Error al crear cita' });
     }
-  }
+  },
 
   async update(req, res) {
     try {
+      const { fecha, hora } = req.body;
       const cita = await Cita.findByPk(req.params.id);
-      
+
       if (!cita) {
         return res.status(404).json({ error: 'Cita no encontrada' });
       }
 
-      await cita.update(req.body);
-      return res.json(cita);
+      const existingCita = await Cita.checkExistingAppointment(fecha, hora, req.params.id);
+      if (existingCita) {
+        return res.status(400).json({ error: 'Ya existe una cita para esta fecha y hora' });
+      }
+
+      await cita.update({
+        fecha,
+        hora
+      });
+
+      return res.json({
+        message: 'Cita actualizada correctamente',
+        cita
+      });
     } catch (error) {
-      console.error(error);
+      console.error('Error al actualizar cita:', error);
       return res.status(500).json({ error: 'Error al actualizar cita' });
     }
-  }
+  },
 
   async delete(req, res) {
     try {
       const cita = await Cita.findByPk(req.params.id);
-      
       if (!cita) {
         return res.status(404).json({ error: 'Cita no encontrada' });
       }
@@ -115,33 +133,76 @@ class CitaController {
       await cita.destroy();
       return res.json({ message: 'Cita eliminada correctamente' });
     } catch (error) {
-      console.error(error);
+      console.error('Error al eliminar cita:', error);
       return res.status(500).json({ error: 'Error al eliminar cita' });
     }
-  }
+  },
 
-  async cambiarEstado(req, res) {
+  async getByCliente(req, res) {
     try {
-      const cita = await Cita.findByPk(req.params.id);
-      
-      if (!cita) {
-        return res.status(404).json({ error: 'Cita no encontrada' });
+      const { page = 1, limit = 10 } = req.query;
+      const offset = (page - 1) * limit;
+
+      const cliente = await Cliente.findByPk(req.params.clienteId);
+      if (!cliente) {
+        return res.status(404).json({ error: 'Cliente no encontrado' });
       }
 
-      const { estado } = req.body;
-      if (!['pendiente', 'confirmada', 'cancelada', 'atendida'].includes(estado)) {
-        return res.status(400).json({ error: 'Estado no válido' });
-      }
+      const { count, rows } = await Cita.findAndCountAll({
+        where: { cliente_id: req.params.clienteId },
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [['fecha', 'DESC'], ['hora', 'DESC']]
+      });
 
-      await cita.update({ estado });
-      return res.json(cita);
+      return res.json({
+        data: rows,
+        pagination: {
+          total: count,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: Math.ceil(count / limit)
+        }
+      });
     } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: 'Error al cambiar estado de cita' });
+      console.error('Error al obtener citas del cliente:', error);
+      return res.status(500).json({ error: 'Error al obtener citas del cliente' });
+    }
+  },
+
+  async getByFecha(req, res) {
+    try {
+      const { fecha, page = 1, limit = 10 } = req.query;
+      const offset = (page - 1) * limit;
+
+      const { count, rows } = await Cita.findAndCountAll({
+        where: { fecha },
+        include: [{
+          model: Cliente,
+          as: 'cliente',
+          attributes: ['nombre', 'apellido', 'documento']
+        }],
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [['hora', 'ASC']]
+      });
+
+      return res.json({
+        data: rows,
+        pagination: {
+          total: count,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: Math.ceil(count / limit)
+        }
+      });
+    } catch (error) {
+      console.error('Error al obtener citas por fecha:', error);
+      return res.status(500).json({ error: 'Error al obtener citas por fecha' });
     }
   }
-}
+};
 
-export default new CitaController();
+export default citaController;
 
 // DONE

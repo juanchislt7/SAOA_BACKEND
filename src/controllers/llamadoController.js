@@ -1,12 +1,9 @@
-import { Op } from 'sequelize';
-import LlamadoTurno from '../models/llamadoTurno.js';
-import Usuario from '../models/usuario.js';
-import Cita from '../models/cita.js';
+import { LlamadoTurno, Cita, Usuario } from '../models/index.js';
 
-class LlamadoController {
+const llamadoController = {
   async list(req, res) {
     try {
-      const { fecha, page = 1, limit = 10 } = req.query;
+      const { page = 1, limit = 10, fecha } = req.query;
       const offset = (page - 1) * limit;
 
       const where = {};
@@ -14,25 +11,24 @@ class LlamadoController {
         where.fecha = fecha;
       }
 
-      const { count, rows: llamados } = await LlamadoTurno.findAndCountAll({
+      const { count, rows } = await LlamadoTurno.findAndCountAll({
         where,
-        include: [
-          {
+        include: [{
+          model: Cita,
+          as: 'cita',
+          include: [{
             model: Usuario,
-            attributes: ['id', 'nombre', 'apellido']
-          },
-          {
-            model: Cita,
-            attributes: ['id', 'fecha', 'hora', 'estado']
-          }
-        ],
+            as: 'usuario',
+            attributes: ['nombre', 'apellido', 'documento']
+          }]
+        }],
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['fecha', 'DESC'], ['hora', 'DESC']]
+        order: [['createdAt', 'DESC']]
       });
 
       return res.json({
-        data: llamados,
+        data: rows,
         pagination: {
           total: count,
           page: parseInt(page),
@@ -44,23 +40,22 @@ class LlamadoController {
       console.error('Error al listar llamados:', error);
       return res.status(500).json({ error: 'Error al listar llamados' });
     }
-  }
+  },
 
   async getById(req, res) {
     try {
       const llamado = await LlamadoTurno.findByPk(req.params.id, {
-        include: [
-          {
+        include: [{
+          model: Cita,
+          as: 'cita',
+          include: [{
             model: Usuario,
-            attributes: ['id', 'nombre', 'apellido']
-          },
-          {
-            model: Cita,
-            attributes: ['id', 'fecha', 'hora', 'estado']
-          }
-        ]
+            as: 'usuario',
+            attributes: ['nombre', 'apellido', 'documento']
+          }]
+        }]
       });
-      
+
       if (!llamado) {
         return res.status(404).json({ error: 'Llamado no encontrado' });
       }
@@ -70,26 +65,17 @@ class LlamadoController {
       console.error('Error al obtener llamado:', error);
       return res.status(500).json({ error: 'Error al obtener llamado' });
     }
-  }
+  },
 
   async create(req, res) {
     try {
-      const {
-        cita_id,
-        usuario_id,
-        fecha,
-        hora,
-        tipo_llamado,
-        observaciones
-      } = req.body;
+      const { cita_id, usuario_id, fecha, hora, observaciones } = req.body;
 
-      // Verificar si la cita existe
       const cita = await Cita.findByPk(cita_id);
       if (!cita) {
         return res.status(404).json({ error: 'Cita no encontrada' });
       }
 
-      // Verificar si el usuario existe
       const usuario = await Usuario.findByPk(usuario_id);
       if (!usuario) {
         return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -100,80 +86,83 @@ class LlamadoController {
         usuario_id,
         fecha,
         hora,
-        tipo_llamado,
-        observaciones
+        observaciones,
+        estado: 'PENDING'
       });
 
-      return res.status(201).json(llamado);
+      return res.status(201).json({
+        message: 'Llamado creado correctamente',
+        llamado
+      });
     } catch (error) {
       console.error('Error al crear llamado:', error);
       return res.status(500).json({ error: 'Error al crear llamado' });
     }
-  }
+  },
 
   async update(req, res) {
     try {
+      const { estado, observaciones } = req.body;
       const llamado = await LlamadoTurno.findByPk(req.params.id);
-      
+
       if (!llamado) {
         return res.status(404).json({ error: 'Llamado no encontrado' });
       }
 
-      const {
-        tipo_llamado,
-        observaciones
-      } = req.body;
-
       await llamado.update({
-        tipo_llamado,
+        estado,
         observaciones
       });
 
-      return res.json(llamado);
+      return res.json({
+        message: 'Llamado actualizado correctamente',
+        llamado
+      });
     } catch (error) {
       console.error('Error al actualizar llamado:', error);
       return res.status(500).json({ error: 'Error al actualizar llamado' });
     }
-  }
+  },
 
   async delete(req, res) {
     try {
       const llamado = await LlamadoTurno.findByPk(req.params.id);
-      
       if (!llamado) {
         return res.status(404).json({ error: 'Llamado no encontrado' });
       }
 
       await llamado.destroy();
-
       return res.json({ message: 'Llamado eliminado correctamente' });
     } catch (error) {
       console.error('Error al eliminar llamado:', error);
       return res.status(500).json({ error: 'Error al eliminar llamado' });
     }
-  }
+  },
 
   async getByCita(req, res) {
     try {
-      const { cita_id } = req.params;
       const { page = 1, limit = 10 } = req.query;
       const offset = (page - 1) * limit;
 
-      const { count, rows: llamados } = await LlamadoTurno.findAndCountAll({
-        where: { cita_id },
-        include: [
-          {
-            model: Usuario,
-            attributes: ['id', 'nombre', 'apellido']
-          }
-        ],
+      const cita = await Cita.findByPk(req.params.citaId);
+      if (!cita) {
+        return res.status(404).json({ error: 'Cita no encontrada' });
+      }
+
+      const { count, rows } = await LlamadoTurno.findAndCountAll({
+        where: { cita_id: req.params.citaId },
+        include: [{
+          model: Usuario,
+          as: 'usuario',
+          attributes: ['nombre', 'apellido', 'documento']
+        }],
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['fecha', 'DESC'], ['hora', 'DESC']]
+        order: [['createdAt', 'DESC']]
       });
 
       return res.json({
-        data: llamados,
+        data: rows,
         pagination: {
           total: count,
           page: parseInt(page),
@@ -185,33 +174,31 @@ class LlamadoController {
       console.error('Error al obtener llamados de la cita:', error);
       return res.status(500).json({ error: 'Error al obtener llamados de la cita' });
     }
-  }
+  },
 
   async getByFecha(req, res) {
     try {
-      const { fecha } = req.params;
-      const { page = 1, limit = 10 } = req.query;
+      const { fecha, page = 1, limit = 10 } = req.query;
       const offset = (page - 1) * limit;
 
-      const { count, rows: llamados } = await LlamadoTurno.findAndCountAll({
+      const { count, rows } = await LlamadoTurno.findAndCountAll({
         where: { fecha },
-        include: [
-          {
+        include: [{
+          model: Cita,
+          as: 'cita',
+          include: [{
             model: Usuario,
-            attributes: ['id', 'nombre', 'apellido']
-          },
-          {
-            model: Cita,
-            attributes: ['id', 'fecha', 'hora', 'estado']
-          }
-        ],
+            as: 'usuario',
+            attributes: ['nombre', 'apellido', 'documento']
+          }]
+        }],
         limit: parseInt(limit),
         offset: parseInt(offset),
         order: [['hora', 'ASC']]
       });
 
       return res.json({
-        data: llamados,
+        data: rows,
         pagination: {
           total: count,
           page: parseInt(page),
@@ -224,6 +211,6 @@ class LlamadoController {
       return res.status(500).json({ error: 'Error al obtener llamados por fecha' });
     }
   }
-}
+};
 
-export default new LlamadoController();
+export default llamadoController;

@@ -1,11 +1,12 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
+import { Op } from 'sequelize';
 
 const Cliente = sequelize.define('Cliente', {
-  documento: {
-    type: DataTypes.STRING,
+  id: {
+    type: DataTypes.INTEGER,
     primaryKey: true,
-    allowNull: false
+    autoIncrement: true
   },
   nombre: {
     type: DataTypes.STRING,
@@ -14,6 +15,11 @@ const Cliente = sequelize.define('Cliente', {
   apellido: {
     type: DataTypes.STRING,
     allowNull: false
+  },
+  documento: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true
   },
   email: {
     type: DataTypes.STRING,
@@ -36,11 +42,23 @@ const Cliente = sequelize.define('Cliente', {
   },
   activo: {
     type: DataTypes.BOOLEAN,
-    allowNull: false,
     defaultValue: true
   }
 }, {
   timestamps: true
 });
+
+// Método para verificar si existe un cliente con el mismo documento
+Cliente.checkExistingDocument = async function(documento, excludeId = null) {
+  const where = {
+    documento
+  };
+  
+  if (excludeId) {
+    where.id = { [Op.ne]: excludeId };
+  }
+  
+  return await this.findOne({ where });
+};
 
 export default Cliente; 

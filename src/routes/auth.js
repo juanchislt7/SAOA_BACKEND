@@ -9,7 +9,7 @@ router.post('/login', authController.login);
 
 // Rutas protegidas
 router.use(authMiddleware);
-router.get('/perfil', authController.getProfile);
-router.post('/cambiar-password', authController.changePassword);
+router.get('/profile', authController.getProfile);
+router.post('/change-password', authController.changePassword);
 
-export default router;
+export default router; 

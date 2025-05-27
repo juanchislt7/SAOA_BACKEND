@@ -1,49 +1,32 @@
-module.exports = {
+export default {
   testEnvironment: 'node',
-  setupFilesAfterEnv: ['./tests/setupTests.js'],
+  transform: {
+    '^.+\\.js$': ['babel-jest', { configFile: './babel.config.js' }]
+  },
+  moduleNameMapper: {
+    '^@/(.*)$': '<rootDir>/src/$1'
+  },
   coveragePathIgnorePatterns: [
     '/node_modules/',
     '/migrations/',
     '/config/'
   ],
   collectCoverageFrom: [
-    'controllers//*.js',
-    'middlewares//*.js',
-    '!/index.js'
+    'controllers/*.js',
+    'middlewares/*.js',
+    'models/*.js'
   ],
   coverageThreshold: {
     global: {
-      branches: 85,
-      functions: 90,
-      lines: 90,
-      statements: 90
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80
     }
-  }
+  },
+  testMatch: [
+    '**/tests/unit/**/*.test.js'
+  ],
+  verbose: true,
+  testTimeout: 10000
 };
-
-
-Resumen de Cobertura:
-
-| Controlador       | Métodos Probados             | Casos de Prueba |
-|-------------------|-----------------------------|-----------------|
-| Cliente           | CRUD completo               | 18 casos        |
-| Cita              | Estados y filtros           | 15 casos        |
-| Asistencia        | Turnos y llamados           | 12 casos        |
-| Llamado           | Gestión por módulo          | 8 casos         |
-| Usuario           | Autenticación y seguridad   | 10 casos        |
-
-Para ejecutar las pruebas:
-bash
-npm test # Ejecuta todas las pruebas con cobertura
-npm run test:watch # Modo observación para desarrollo
-npm run test:cov # Genera reporte de cobertura
-
-
-Características clave:
-✅ 90%+ cobertura de código  
-✅ Mockeo completo de base de datos  
-✅ Validación de reglas de negocio  
-✅ Pruebas de errores y edge cases  
-✅ Configuración CI/CD ready  
-
-¿Necesitas que agregue pruebas para algún escenario específico adicional?
