@@ -1,5 +1,5 @@
 import { Op } from 'sequelize';
-import { Cliente } from '../models/index.js';
+import { Cliente, Cita, Asistencia, LlamadoTurno } from '../models/index.js';
 
 const clienteController = {
   async list(req, res) {
@@ -20,7 +20,21 @@ const clienteController = {
         where,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['createdAt', 'DESC']]
+        order: [['createdAt', 'DESC']],
+        include: [
+          {
+            model: Cita,
+            attributes: ['Id_cita', 'Entidad', 'Servicio_Agendado', 'Fecha_cita']
+          },
+          {
+            model: Asistencia,
+            attributes: ['Turno_Asignado', 'Estado_Cliente', 'Fecha_Asistencia', 'Hora_Asistencia']
+          },
+          {
+            model: LlamadoTurno,
+            attributes: ['Id_Llamado', 'Fecha_Atencion', 'Hora_Atencion', 'Servicio_Atendido']
+          }
+        ]
       });
 
       return res.json({
@@ -40,7 +54,22 @@ const clienteController = {
 
   async getById(req, res) {
     try {
-      const cliente = await Cliente.findByPk(req.params.id);
+      const cliente = await Cliente.findByPk(req.params.id, {
+        include: [
+          {
+            model: Cita,
+            attributes: ['Id_cita', 'Entidad', 'Servicio_Agendado', 'Fecha_cita']
+          },
+          {
+            model: Asistencia,
+            attributes: ['Turno_Asignado', 'Estado_Cliente', 'Fecha_Asistencia', 'Hora_Asistencia']
+          },
+          {
+            model: LlamadoTurno,
+            attributes: ['Id_Llamado', 'Fecha_Atencion', 'Hora_Atencion', 'Servicio_Atendido']
+          }
+        ]
+      });
       if (!cliente) {
         return res.status(404).json({ error: 'Cliente no encontrado' });
       }
@@ -132,6 +161,20 @@ const clienteController = {
             { documento: { [Op.like]: `%${query}%` } }
           ]
         },
+        include: [
+          {
+            model: Cita,
+            attributes: ['Id_cita', 'Entidad', 'Servicio_Agendado', 'Fecha_cita']
+          },
+          {
+            model: Asistencia,
+            attributes: ['Turno_Asignado', 'Estado_Cliente', 'Fecha_Asistencia', 'Hora_Asistencia']
+          },
+          {
+            model: LlamadoTurno,
+            attributes: ['Id_Llamado', 'Fecha_Atencion', 'Hora_Atencion', 'Servicio_Atendido']
+          }
+        ],
         limit: 10
       });
 

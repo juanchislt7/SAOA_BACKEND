@@ -3,41 +3,57 @@ import sequelize from '../config/database.js';
 import { Op } from 'sequelize';
 
 const Cita = sequelize.define('Cita', {
-  id: {
+  Id_cita: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
-  cliente_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false
+  Entidad: {
+    type: DataTypes.STRING(45),
+    allowNull: true
   },
-  fecha: {
+  Servicio_Agendado: {
+    type: DataTypes.STRING(45),
+    allowNull: true
+  },
+  Fecha_cita: {
     type: DataTypes.DATEONLY,
-    allowNull: false
+    allowNull: true
   },
-  hora: {
-    type: DataTypes.TIME,
-    allowNull: false
+  Observaciones: {
+    type: DataTypes.STRING(60),
+    allowNull: true
   },
-  estado: {
-    type: DataTypes.ENUM('PENDING', 'COMPLETED', 'CANCELLED'),
-    defaultValue: 'PENDING'
+  Usuarios_Id_Usuarios: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'usuarios',
+      key: 'Id_Usuario'
+    }
   },
-  observaciones: {
-    type: DataTypes.TEXT
+  Cliente_Id_cliente: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'cliente',
+      key: 'Id_Cliente'
+    }
   }
+}, {
+  tableName: 'citas',
+  timestamps: false
 });
 
 // Método para verificar si existe una cita en la misma fecha y hora
 Cita.checkExistingAppointment = async function(fecha, hora, excludeId = null) {
   const where = {
-    fecha,
+    Fecha_cita: fecha,
     hora
   };
   
   if (excludeId) {
-    where.id = { [Op.ne]: excludeId };
+    where.Id_cita = { [Op.ne]: excludeId };
   }
   
   return await this.findOne({ where });

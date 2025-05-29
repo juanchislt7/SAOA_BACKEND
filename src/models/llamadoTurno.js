@@ -2,39 +2,34 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
 
 const LlamadoTurno = sequelize.define('LlamadoTurno', {
-  id: {
+  Id_Llamado: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
-  cita_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false
-  },
-  usuario_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false
-  },
-  fecha: {
+  Fecha_Atencion: {
     type: DataTypes.DATEONLY,
-    allowNull: false
+    allowNull: true
   },
-  hora: {
+  Hora_Atencion: {
     type: DataTypes.TIME,
-    allowNull: false
+    allowNull: true
   },
-  estado: {
-    type: DataTypes.ENUM('PENDING', 'COMPLETED', 'CANCELLED'),
-    defaultValue: 'PENDING'
+  Servicio_Atendido: {
+    type: DataTypes.STRING(45),
+    allowNull: true
   },
-  observaciones: {
-    type: DataTypes.TEXT
+  Cliente_Id_Cliente: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'cliente',
+      key: 'Id_Cliente'
+    }
   }
 }, {
-  tableName: 'llamados_turno',
-  timestamps: true,
-  createdAt: 'fecha_creacion',
-  updatedAt: 'fecha_actualizacion'
+  tableName: 'llamado_turnos',
+  timestamps: false
 });
 
 export default LlamadoTurno; 

@@ -5,49 +5,23 @@ import Cita from './cita.js';
 import Asistencia from './asistencia.js';
 import LlamadoTurno from './llamadoTurno.js';
 
-// Relaciones Cliente-Cita
-Cliente.hasMany(Cita, {
-  foreignKey: 'cliente_id',
-  as: 'citas'
-});
+// Relaciones Cliente
+Cliente.hasMany(Cita, { foreignKey: 'Cliente_Id_cliente' });
+Cliente.hasMany(Asistencia, { foreignKey: 'Cliente_Id_cliente' });
+Cliente.hasMany(LlamadoTurno, { foreignKey: 'Cliente_Id_Cliente' });
 
-Cita.belongsTo(Cliente, {
-  foreignKey: 'cliente_id',
-  as: 'cliente'
-});
+// Relaciones Usuario
+Usuario.hasMany(Cita, { foreignKey: 'Usuarios_Id_Usuarios' });
 
-// Relaciones Cita-Asistencia
-Cita.hasOne(Asistencia, {
-  foreignKey: 'cita_id',
-  as: 'asistencia'
-});
+// Relaciones Cita
+Cita.belongsTo(Cliente, { foreignKey: 'Cliente_Id_cliente' });
+Cita.belongsTo(Usuario, { foreignKey: 'Usuarios_Id_Usuarios' });
 
-Asistencia.belongsTo(Cita, {
-  foreignKey: 'cita_id',
-  as: 'cita'
-});
+// Relaciones Asistencia
+Asistencia.belongsTo(Cliente, { foreignKey: 'Cliente_Id_cliente' });
 
-// Relaciones Cita-LlamadoTurno
-Cita.hasMany(LlamadoTurno, {
-  foreignKey: 'cita_id',
-  as: 'llamados'
-});
-
-LlamadoTurno.belongsTo(Cita, {
-  foreignKey: 'cita_id',
-  as: 'cita'
-});
-
-// Relaciones Usuario-LlamadoTurno
-Usuario.hasMany(LlamadoTurno, {
-  foreignKey: 'usuario_id',
-  as: 'llamados'
-});
-
-LlamadoTurno.belongsTo(Usuario, {
-  foreignKey: 'usuario_id',
-  as: 'usuario'
-});
+// Relaciones LlamadoTurno
+LlamadoTurno.belongsTo(Cliente, { foreignKey: 'Cliente_Id_Cliente' });
 
 // Sincronizar modelos con la base de datos
 const syncDatabase = async () => {

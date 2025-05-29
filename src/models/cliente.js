@@ -3,49 +3,34 @@ import sequelize from '../config/database.js';
 import { Op } from 'sequelize';
 
 const Cliente = sequelize.define('Cliente', {
-  id: {
+  Id_Cliente: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
-  nombre: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  apellido: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  documento: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true
-  },
-  email: {
-    type: DataTypes.STRING,
-    allowNull: true,
-    validate: {
-      isEmail: true
-    }
-  },
-  telefono: {
-    type: DataTypes.STRING,
+  Nombre_Cliente: {
+    type: DataTypes.STRING(45),
     allowNull: true
   },
-  direccion: {
-    type: DataTypes.STRING,
+  Apellido_Cliente: {
+    type: DataTypes.STRING(45),
     allowNull: true
   },
-  fecha_nacimiento: {
-    type: DataTypes.DATEONLY,
+  Email_Cliente: {
+    type: DataTypes.STRING(50),
     allowNull: true
   },
-  activo: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: true
+  Telefono_cliente: {
+    type: DataTypes.INTEGER(10),
+    allowNull: true
+  },
+  Estado_Cliente: {
+    type: DataTypes.STRING(10),
+    allowNull: true
   }
 }, {
-  timestamps: true
+  tableName: 'cliente',
+  timestamps: false
 });
 
 // Método para verificar si existe un cliente con el mismo documento

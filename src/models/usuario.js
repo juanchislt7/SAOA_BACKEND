@@ -3,47 +3,57 @@ import sequelize from '../config/database.js';
 import bcrypt from 'bcryptjs';
 
 const Usuario = sequelize.define('Usuario', {
-  id: {
+  Id_Usuario: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
-  nombre: {
-    type: DataTypes.STRING,
-    allowNull: false
+  Nombre: {
+    type: DataTypes.STRING(45),
+    allowNull: true
   },
-  email: {
-    type: DataTypes.STRING,
-    allowNull: false,
-    unique: true,
-    validate: {
-      isEmail: true
-    }
+  Apellido: {
+    type: DataTypes.STRING(45),
+    allowNull: true
   },
-  password: {
-    type: DataTypes.STRING,
-    allowNull: false
+  Entidad: {
+    type: DataTypes.STRING(45),
+    allowNull: true
   },
-  rol: {
-    type: DataTypes.ENUM('admin', 'usuario'),
-    defaultValue: 'usuario'
+  Email: {
+    type: DataTypes.STRING(50),
+    allowNull: true
   },
-  activo: {
-    type: DataTypes.BOOLEAN,
-    defaultValue: true
+  Celular: {
+    type: DataTypes.BIGINT(20),
+    allowNull: true
+  },
+  Tipo_Usuario: {
+    type: DataTypes.STRING(10),
+    allowNull: true
+  },
+  Estado_Usuario: {
+    type: DataTypes.STRING(10),
+    allowNull: true
+  },
+  Contraseña: {
+    type: DataTypes.STRING(45),
+    allowNull: true
   }
 }, {
+  tableName: 'usuarios',
+  timestamps: false,
   hooks: {
     beforeCreate: async (usuario) => {
-      if (usuario.password) {
+      if (usuario.Contraseña) {
         const salt = await bcrypt.genSalt(10);
-        usuario.password = await bcrypt.hash(usuario.password, salt);
+        usuario.Contraseña = await bcrypt.hash(usuario.Contraseña, salt);
       }
     },
     beforeUpdate: async (usuario) => {
-      if (usuario.changed('password')) {
+      if (usuario.changed('Contraseña')) {
         const salt = await bcrypt.genSalt(10);
-        usuario.password = await bcrypt.hash(usuario.password, salt);
+        usuario.Contraseña = await bcrypt.hash(usuario.Contraseña, salt);
       }
     }
   }
@@ -51,7 +61,7 @@ const Usuario = sequelize.define('Usuario', {
 
 // Método para verificar contraseña
 Usuario.prototype.verifyPassword = async function(password) {
-  return await bcrypt.compare(password, this.password);
+  return await bcrypt.compare(password, this.Contraseña);
 };
 
 export default Usuario; 

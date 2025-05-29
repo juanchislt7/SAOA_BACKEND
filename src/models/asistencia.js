@@ -2,22 +2,34 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
 
 const Asistencia = sequelize.define('Asistencia', {
-  id: {
+  Turno_Asignado: {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true
   },
-  cita_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false
+  Estado_Cliente: {
+    type: DataTypes.STRING(10),
+    allowNull: true
   },
-  hora_llegada: {
+  Fecha_Asistencia: {
+    type: DataTypes.DATEONLY,
+    allowNull: true
+  },
+  Hora_Asistencia: {
     type: DataTypes.TIME,
-    allowNull: false
+    allowNull: true
   },
-  observaciones: {
-    type: DataTypes.TEXT
+  Cliente_Id_cliente: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    references: {
+      model: 'cliente',
+      key: 'Id_Cliente'
+    }
   }
+}, {
+  tableName: 'asistencia',
+  timestamps: false
 });
 
 // Método para verificar si existe una asistencia para una cita

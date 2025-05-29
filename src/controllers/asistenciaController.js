@@ -1,4 +1,4 @@
-import { Asistencia, Cita, Cliente } from '../models/index.js';
+import { Asistencia, Cliente } from '../models/index.js';
 import { Op } from 'sequelize';
 
 const asistenciaController = {
@@ -9,23 +9,18 @@ const asistenciaController = {
 
       const where = {};
       if (fecha) {
-        where['$cita.fecha$'] = fecha;
+        where.Fecha_Asistencia = fecha;
       }
 
       const { count, rows } = await Asistencia.findAndCountAll({
         where,
         include: [{
-          model: Cita,
-          as: 'cita',
-          include: [{
-            model: Cliente,
-            as: 'cliente',
-            attributes: ['nombre', 'apellido', 'documento']
-          }]
+          model: Cliente,
+          attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
         }],
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['createdAt', 'DESC']]
+        order: [['Fecha_Asistencia', 'DESC']]
       });
 
       return res.json({
@@ -47,13 +42,8 @@ const asistenciaController = {
     try {
       const asistencia = await Asistencia.findByPk(req.params.id, {
         include: [{
-          model: Cita,
-          as: 'cita',
-          include: [{
-            model: Cliente,
-            as: 'cliente',
-            attributes: ['nombre', 'apellido', 'documento']
-          }]
+          model: Cliente,
+          attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
         }]
       });
 
@@ -70,29 +60,17 @@ const asistenciaController = {
 
   async create(req, res) {
     try {
-      const { cita_id, hora_llegada, observaciones } = req.body;
-
-      const cita = await Cita.findByPk(cita_id);
-      if (!cita) {
-        return res.status(404).json({ error: 'Cita no encontrada' });
-      }
-
-      const existingAsistencia = await Asistencia.checkExistingAttendance(cita_id);
-      if (existingAsistencia) {
-        return res.status(400).json({ error: 'Ya existe una asistencia para esta cita' });
-      }
-
-      const asistencia = await Asistencia.create({
-        cita_id,
-        hora_llegada,
-        observaciones
+      const asistencia = await Asistencia.create(req.body);
+      const asistenciaConRelaciones = await Asistencia.findByPk(asistencia.Turno_Asignado, {
+        include: [{
+          model: Cliente,
+          attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
+        }]
       });
-
-      await cita.update({ estado: 'COMPLETED' });
 
       return res.status(201).json({
         message: 'Asistencia registrada correctamente',
-        asistencia
+        asistencia: asistenciaConRelaciones
       });
     } catch (error) {
       console.error('Error al crear asistencia:', error);
@@ -102,21 +80,22 @@ const asistenciaController = {
 
   async update(req, res) {
     try {
-      const { hora_llegada, observaciones } = req.body;
       const asistencia = await Asistencia.findByPk(req.params.id);
-
       if (!asistencia) {
         return res.status(404).json({ error: 'Asistencia no encontrada' });
       }
 
-      await asistencia.update({
-        hora_llegada,
-        observaciones
+      await asistencia.update(req.body);
+      const asistenciaActualizada = await Asistencia.findByPk(asistencia.Turno_Asignado, {
+        include: [{
+          model: Cliente,
+          attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
+        }]
       });
 
       return res.json({
         message: 'Asistencia actualizada correctamente',
-        asistencia
+        asistencia: asistenciaActualizada
       });
     } catch (error) {
       console.error('Error al actualizar asistencia:', error);
@@ -126,20 +105,12 @@ const asistenciaController = {
 
   async delete(req, res) {
     try {
-      const asistencia = await Asistencia.findByPk(req.params.id, {
-        include: [{
-          model: Cita,
-          as: 'cita'
-        }]
-      });
-
+      const asistencia = await Asistencia.findByPk(req.params.id);
       if (!asistencia) {
         return res.status(404).json({ error: 'Asistencia no encontrada' });
       }
 
       await asistencia.destroy();
-      await asistencia.cita.update({ estado: 'PENDING' });
-
       return res.json({ message: 'Asistencia eliminada correctamente' });
     } catch (error) {
       console.error('Error al eliminar asistencia:', error);
@@ -158,19 +129,14 @@ const asistenciaController = {
       }
 
       const { count, rows } = await Asistencia.findAndCountAll({
+        where: { Cliente_Id_cliente: req.params.clienteId },
         include: [{
-          model: Cita,
-          as: 'cita',
-          where: { cliente_id: req.params.clienteId },
-          include: [{
-            model: Cliente,
-            as: 'cliente',
-            attributes: ['nombre', 'apellido', 'documento']
-          }]
+          model: Cliente,
+          attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
         }],
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['createdAt', 'DESC']]
+        order: [['Fecha_Asistencia', 'DESC']]
       });
 
       return res.json({
@@ -194,19 +160,14 @@ const asistenciaController = {
       const offset = (page - 1) * limit;
 
       const { count, rows } = await Asistencia.findAndCountAll({
+        where: { Fecha_Asistencia: fecha },
         include: [{
-          model: Cita,
-          as: 'cita',
-          where: { fecha },
-          include: [{
-            model: Cliente,
-            as: 'cliente',
-            attributes: ['nombre', 'apellido', 'documento']
-          }]
+          model: Cliente,
+          attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
         }],
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['hora_llegada', 'ASC']]
+        order: [['Hora_Asistencia', 'ASC']]
       });
 
       return res.json({
@@ -221,6 +182,112 @@ const asistenciaController = {
     } catch (error) {
       console.error('Error al obtener asistencias por fecha:', error);
       return res.status(500).json({ error: 'Error al obtener asistencias por fecha' });
+    }
+  },
+
+  async getAllAsistencias(req, res) {
+    try {
+      const asistencias = await Asistencia.findAll({
+        include: [
+          {
+            model: Cliente,
+            attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
+          }
+        ]
+      });
+      res.json(asistencias);
+    } catch (error) {
+      res.status(500).json({ mensaje: 'Error al obtener las asistencias', error: error.message });
+    }
+  },
+
+  async getAsistenciaById(req, res) {
+    try {
+      const asistencia = await Asistencia.findByPk(req.params.id, {
+        include: [
+          {
+            model: Cliente,
+            attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
+          }
+        ]
+      });
+      if (!asistencia) {
+        return res.status(404).json({ mensaje: 'Asistencia no encontrada' });
+      }
+      res.json(asistencia);
+    } catch (error) {
+      res.status(500).json({ mensaje: 'Error al obtener la asistencia', error: error.message });
+    }
+  },
+
+  async createAsistencia(req, res) {
+    try {
+      const asistencia = await Asistencia.create(req.body);
+      const asistenciaConRelaciones = await Asistencia.findByPk(asistencia.Turno_Asignado, {
+        include: [
+          {
+            model: Cliente,
+            attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
+          }
+        ]
+      });
+      res.status(201).json(asistenciaConRelaciones);
+    } catch (error) {
+      res.status(400).json({ mensaje: 'Error al crear la asistencia', error: error.message });
+    }
+  },
+
+  async updateAsistencia(req, res) {
+    try {
+      const asistencia = await Asistencia.findByPk(req.params.id);
+      if (!asistencia) {
+        return res.status(404).json({ mensaje: 'Asistencia no encontrada' });
+      }
+      await asistencia.update(req.body);
+      const asistenciaActualizada = await Asistencia.findByPk(asistencia.Turno_Asignado, {
+        include: [
+          {
+            model: Cliente,
+            attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
+          }
+        ]
+      });
+      res.json(asistenciaActualizada);
+    } catch (error) {
+      res.status(400).json({ mensaje: 'Error al actualizar la asistencia', error: error.message });
+    }
+  },
+
+  async deleteAsistencia(req, res) {
+    try {
+      const asistencia = await Asistencia.findByPk(req.params.id);
+      if (!asistencia) {
+        return res.status(404).json({ mensaje: 'Asistencia no encontrada' });
+      }
+      await asistencia.destroy();
+      res.json({ mensaje: 'Asistencia eliminada correctamente' });
+    } catch (error) {
+      res.status(500).json({ mensaje: 'Error al eliminar la asistencia', error: error.message });
+    }
+  },
+
+  async searchAsistenciasByDate(req, res) {
+    try {
+      const { fecha } = req.query;
+      const asistencias = await Asistencia.findAll({
+        where: {
+          Fecha_Asistencia: fecha
+        },
+        include: [
+          {
+            model: Cliente,
+            attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
+          }
+        ]
+      });
+      res.json(asistencias);
+    } catch (error) {
+      res.status(500).json({ mensaje: 'Error al buscar asistencias', error: error.message });
     }
   }
 };

@@ -1,4 +1,5 @@
-import { LlamadoTurno, Cita, Usuario } from '../models/index.js';
+import { LlamadoTurno, Cita, Usuario, Cliente } from '../models/index.js';
+import { Op } from 'sequelize';
 
 const llamadoController = {
   async list(req, res) {
@@ -20,6 +21,10 @@ const llamadoController = {
             model: Usuario,
             as: 'usuario',
             attributes: ['nombre', 'apellido', 'documento']
+          }],
+          include: [{
+            model: Cliente,
+            attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
           }]
         }],
         limit: parseInt(limit),
@@ -52,6 +57,10 @@ const llamadoController = {
             model: Usuario,
             as: 'usuario',
             attributes: ['nombre', 'apellido', 'documento']
+          }],
+          include: [{
+            model: Cliente,
+            attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
           }]
         }]
       });
@@ -90,9 +99,16 @@ const llamadoController = {
         estado: 'PENDING'
       });
 
+      const llamadoConRelaciones = await LlamadoTurno.findByPk(llamado.Id_Llamado, {
+        include: [{
+          model: Cliente,
+          attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
+        }]
+      });
+
       return res.status(201).json({
         message: 'Llamado creado correctamente',
-        llamado
+        llamado: llamadoConRelaciones
       });
     } catch (error) {
       console.error('Error al crear llamado:', error);
@@ -114,9 +130,16 @@ const llamadoController = {
         observaciones
       });
 
+      const llamadoActualizado = await LlamadoTurno.findByPk(llamado.Id_Llamado, {
+        include: [{
+          model: Cliente,
+          attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
+        }]
+      });
+
       return res.json({
         message: 'Llamado actualizado correctamente',
-        llamado
+        llamado: llamadoActualizado
       });
     } catch (error) {
       console.error('Error al actualizar llamado:', error);
@@ -209,6 +232,61 @@ const llamadoController = {
     } catch (error) {
       console.error('Error al obtener llamados por fecha:', error);
       return res.status(500).json({ error: 'Error al obtener llamados por fecha' });
+    }
+  },
+
+  async getAllLlamados(req, res) {
+    try {
+      const llamados = await LlamadoTurno.findAll({
+        include: [
+          {
+            model: Cliente,
+            attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
+          }
+        ]
+      });
+      res.json(llamados);
+    } catch (error) {
+      res.status(500).json({ mensaje: 'Error al obtener los llamados', error: error.message });
+    }
+  },
+
+  async getLlamadoById(req, res) {
+    try {
+      const llamado = await LlamadoTurno.findByPk(req.params.id, {
+        include: [
+          {
+            model: Cliente,
+            attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
+          }
+        ]
+      });
+      if (!llamado) {
+        return res.status(404).json({ mensaje: 'Llamado no encontrado' });
+      }
+      res.json(llamado);
+    } catch (error) {
+      res.status(500).json({ mensaje: 'Error al obtener el llamado', error: error.message });
+    }
+  },
+
+  async searchLlamadosByDate(req, res) {
+    try {
+      const { fecha } = req.query;
+      const llamados = await LlamadoTurno.findAll({
+        where: {
+          Fecha_Atencion: fecha
+        },
+        include: [
+          {
+            model: Cliente,
+            attributes: ['Id_Cliente', 'Nombre_Cliente', 'Apellido_Cliente', 'Email_Cliente']
+          }
+        ]
+      });
+      res.json(llamados);
+    } catch (error) {
+      res.status(500).json({ mensaje: 'Error al buscar llamados', error: error.message });
     }
   }
 };

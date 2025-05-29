@@ -1,4 +1,4 @@
-import { Cita, Cliente } from '../models/index.js';
+import { Cita, Cliente, Usuario } from '../models/index.js';
 import { Op } from 'sequelize';
 
 const citaController = {
@@ -21,6 +21,9 @@ const citaController = {
           model: Cliente,
           as: 'cliente',
           attributes: ['nombre', 'apellido', 'documento']
+        }, {
+          model: Usuario,
+          attributes: ['id', 'nombre', 'apellido', 'entidad']
         }],
         limit: parseInt(limit),
         offset: parseInt(offset),
@@ -49,7 +52,10 @@ const citaController = {
           model: Cliente,
           as: 'cliente',
           attributes: ['nombre', 'apellido', 'documento']
-        }]
+        }, {
+          model: Usuario,
+          attributes: ['id', 'nombre', 'apellido', 'entidad']
+        }],
       });
 
       if (!cita) {
@@ -84,9 +90,19 @@ const citaController = {
         estado: 'PENDING'
       });
 
+      const citaConRelaciones = await Cita.findByPk(cita.id, {
+        include: [{
+          model: Cliente,
+          attributes: ['id', 'nombre', 'apellido', 'documento']
+        }, {
+          model: Usuario,
+          attributes: ['id', 'nombre', 'apellido', 'entidad']
+        }],
+      });
+
       return res.status(201).json({
         message: 'Cita creada correctamente',
-        cita
+        cita: citaConRelaciones
       });
     } catch (error) {
       console.error('Error al crear cita:', error);
@@ -113,9 +129,19 @@ const citaController = {
         hora
       });
 
+      const citaActualizada = await Cita.findByPk(cita.id, {
+        include: [{
+          model: Cliente,
+          attributes: ['id', 'nombre', 'apellido', 'documento']
+        }, {
+          model: Usuario,
+          attributes: ['id', 'nombre', 'apellido', 'entidad']
+        }],
+      });
+
       return res.json({
         message: 'Cita actualizada correctamente',
-        cita
+        cita: citaActualizada
       });
     } catch (error) {
       console.error('Error al actualizar cita:', error);
@@ -181,6 +207,9 @@ const citaController = {
           model: Cliente,
           as: 'cliente',
           attributes: ['nombre', 'apellido', 'documento']
+        }, {
+          model: Usuario,
+          attributes: ['id', 'nombre', 'apellido', 'entidad']
         }],
         limit: parseInt(limit),
         offset: parseInt(offset),
@@ -199,6 +228,50 @@ const citaController = {
     } catch (error) {
       console.error('Error al obtener citas por fecha:', error);
       return res.status(500).json({ error: 'Error al obtener citas por fecha' });
+    }
+  },
+
+  async getAllCitas(req, res) {
+    try {
+      const citas = await Cita.findAll({
+        include: [
+          {
+            model: Cliente,
+            attributes: ['id', 'nombre', 'apellido', 'email']
+          },
+          {
+            model: Usuario,
+            attributes: ['id', 'nombre', 'apellido', 'entidad']
+          }
+        ]
+      });
+      res.json(citas);
+    } catch (error) {
+      res.status(500).json({ mensaje: 'Error al obtener las citas', error: error.message });
+    }
+  },
+
+  async searchCitasByDate(req, res) {
+    try {
+      const { fecha } = req.query;
+      const citas = await Cita.findAll({
+        where: {
+          fecha: fecha
+        },
+        include: [
+          {
+            model: Cliente,
+            attributes: ['id', 'nombre', 'apellido', 'email']
+          },
+          {
+            model: Usuario,
+            attributes: ['id', 'nombre', 'apellido', 'entidad']
+          }
+        ]
+      });
+      res.json(citas);
+    } catch (error) {
+      res.status(500).json({ mensaje: 'Error al buscar citas', error: error.message });
     }
   }
 };
