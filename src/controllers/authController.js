@@ -6,19 +6,36 @@ const authController = {
   async login(req, res) {
     try {
       const { email, password } = req.body;
+      console.log('Intento de login:', { email, password });
 
-      const usuario = await Usuario.findOne({ where: { email } });
+      const usuario = await Usuario.findOne({ where: { Email: email } });
+      console.log('Usuario encontrado:', {
+        id: usuario?.Id_Usuario,
+        email: usuario?.Email,
+        contraseñaHasheada: usuario?.Contraseña
+      });
+
       if (!usuario) {
         return res.status(401).json({ error: 'Credenciales inválidas' });
       }
 
+      // Debug de la verificación de contraseña
+      console.log('Iniciando verificación de contraseña...');
+      console.log('Contraseña ingresada:', password);
+      console.log('Contraseña hasheada en BD:', usuario.Contraseña);
+      
       const isValidPassword = await usuario.verifyPassword(password);
+      console.log('Resultado de verificación:', isValidPassword);
+
       if (!isValidPassword) {
         return res.status(401).json({ error: 'Credenciales inválidas' });
       }
 
       const token = jwt.sign(
-        { id: usuario.id, rol: usuario.rol },
+        { 
+          id: usuario.Id_Usuario, 
+          rol: usuario.Tipo_Usuario 
+        },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
@@ -26,10 +43,11 @@ const authController = {
       return res.json({
         token,
         usuario: {
-          id: usuario.id,
-          nombre: usuario.nombre,
-          email: usuario.email,
-          rol: usuario.rol
+          id: usuario.Id_Usuario,
+          nombre: usuario.Nombre,
+          apellido: usuario.Apellido,
+          email: usuario.Email,
+          tipo_usuario: usuario.Tipo_Usuario
         }
       });
     } catch (error) {
@@ -41,7 +59,7 @@ const authController = {
   async getProfile(req, res) {
     try {
       const usuario = await Usuario.findByPk(req.userId, {
-        attributes: { exclude: ['password'] }
+        attributes: { exclude: ['Contraseña'] }
       });
 
       if (!usuario) {
@@ -58,14 +76,14 @@ const authController = {
   async changePassword(req, res) {
     try {
       const { currentPassword, newPassword } = req.body;
-      const usuario = await Usuario.findByPk(req.usuario.id);
+      const usuario = await Usuario.findByPk(req.userId);
 
       const isValidPassword = await usuario.verifyPassword(currentPassword);
       if (!isValidPassword) {
         return res.status(401).json({ error: 'Contraseña actual incorrecta' });
       }
 
-      usuario.password = newPassword;
+      usuario.Contraseña = newPassword;
       await usuario.save();
 
       return res.json({ message: 'Contraseña actualizada correctamente' });

@@ -15,7 +15,7 @@ class UsuarioController {
       // Buscar usuario por email
       const usuario = await Usuario.findOne({ where: { email } });
       if (!usuario) {
-        return res.status(401).json({ error: 'Credenciales inválidas' });
+        return res.status(401).json({ error: 'Credenciales inválidas.' });
       }
 
       // Verificar si el usuario está activo
@@ -26,7 +26,7 @@ class UsuarioController {
       // Verificar contraseña
       const passwordValido = await bcrypt.compare(password, usuario.password);
       if (!passwordValido) {
-        return res.status(401).json({ error: 'Credenciales inválidas' });
+        return res.status(401).json({ error: 'Credenciales inválidas..' });
       }
 
       // Generar token JWT
@@ -58,7 +58,8 @@ class UsuarioController {
 
   async registro(req, res) {
     try {
-      const { nombre, email, password, rol } = req.body;
+      const { nombre, apellido, email, password, tipo_usuario, estado_usuario } = req.body;
+      console.log('*******',req.body)
 
       // Verificar si el email ya está registrado
       const usuarioExistente = await Usuario.findOne({ where: { email } });
@@ -68,20 +69,21 @@ class UsuarioController {
 
       // Crear nuevo usuario
       const usuario = await Usuario.create({
-        nombre,
-        email,
-        password,
-        rol: rol || 'usuario',
-        activo: true
+        Nombre: nombre,
+        Apellido: apellido,
+        Email: email,
+        Contraseña: password,
+        Tipo_Usuario: tipo_usuario,
+        Estado_Usuario: estado_usuario
       });
-
+console.log('*******',usuario)
       return res.status(201).json({
         message: 'Usuario registrado correctamente',
         usuario: {
-          id: usuario.id,
-          nombre: usuario.nombre,
-          email: usuario.email,
-          rol: usuario.rol
+          id: usuario.Id_Usuario,
+          nombre: usuario.Nombre,
+          email: usuario.Email,
+          rol: usuario.Tipo_Usuario
         }
       });
     } catch (error) {
@@ -253,27 +255,21 @@ class UsuarioController {
         return res.status(404).json({ error: 'Usuario no encontrado' });
       }
 
-      const { nombre, email, rol, activo } = req.body;
+      const { Nombre, Apellido, Email, Tipo_Usuario, Estado } = req.body;
 
+      /*
       // Verificar si el nuevo email ya está en uso
-      if (email && email !== usuario.email) {
-        const emailExistente = await Usuario.findOne({ where: { email } });
+      if (email && email !== usuario.Email) {
+        const emailExistente = await Usuario.findOne({ where: { Email } });
         if (emailExistente) {
           return res.status(400).json({ error: 'El email ya está en uso' });
         }
-      }
+      }*/
 
-      await usuario.update({ nombre, email, rol, activo });
+      await usuario.update({ Nombre, Apellido, Email, Tipo_Usuario, Estado });
 
       return res.json({
-        message: 'Usuario actualizado correctamente',
-        usuario: {
-          id: usuario.id,
-          nombre: usuario.nombre,
-          email: usuario.email,
-          rol: usuario.rol,
-          activo: usuario.activo
-        }
+        message: 'Usuario actualizado correctamente'
       });
     } catch (error) {
       console.error('Error al actualizar usuario:', error);
@@ -289,12 +285,12 @@ class UsuarioController {
         return res.status(404).json({ error: 'Usuario no encontrado' });
       }
 
-      // En lugar de eliminar físicamente, marcamos como inactivo
-      await usuario.update({ activo: false });
+      // Eliminar el usuario de la base de datos
+      await usuario.destroy();
 
-      return res.json({ message: 'Usuario desactivado correctamente' });
+      return res.json({ message: 'Usuario eliminado correctamente' });
     } catch (error) {
-      console.error('Error al desactivar usuario:', error);
+      console.error('Error al eliminar usuario:', error);
       return res.status(500).json({ error: 'Error en el servidor' });
     }
   }

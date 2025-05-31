@@ -24,20 +24,17 @@ const Cita = sequelize.define('Cita', {
     type: DataTypes.STRING(60),
     allowNull: true
   },
+  Identificacion_Cliente: {
+    type: DataTypes.STRING(20),
+    allowNull: true,
+    comment: 'Identificación del cliente (cédula, DNI, etc.)'
+  },
   Usuarios_Id_Usuarios: {
     type: DataTypes.INTEGER,
     allowNull: false,
     references: {
       model: 'usuarios',
       key: 'Id_Usuario'
-    }
-  },
-  Cliente_Id_cliente: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: 'cliente',
-      key: 'Id_Cliente'
     }
   }
 }, {
@@ -46,10 +43,9 @@ const Cita = sequelize.define('Cita', {
 });
 
 // Método para verificar si existe una cita en la misma fecha y hora
-Cita.checkExistingAppointment = async function(fecha, hora, excludeId = null) {
+Cita.checkExistingAppointment = async function(fecha, excludeId = null) {
   const where = {
-    Fecha_cita: fecha,
-    hora
+    Fecha_cita: fecha
   };
   
   if (excludeId) {

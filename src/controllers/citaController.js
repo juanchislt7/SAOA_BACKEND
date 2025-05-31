@@ -1,33 +1,31 @@
-import { Cita, Cliente, Usuario } from '../models/index.js';
+import { Cita, Usuario } from '../models/index.js';
 import { Op } from 'sequelize';
 
 const citaController = {
   async list(req, res) {
     try {
-      const { page = 1, limit = 10, fecha, estado } = req.query;
+      const { page = 1, limit = 10, Fecha_cita, Identificacion_Cliente } = req.query;
       const offset = (page - 1) * limit;
 
       const where = {};
-      if (fecha) {
-        where.fecha = fecha;
+      if (Fecha_cita) {
+        where.Fecha_cita = Fecha_cita;
       }
-      if (estado) {
-        where.estado = estado;
+      if (Identificacion_Cliente) {
+        where.Identificacion_Cliente = {
+          [Op.like]: `%${Identificacion_Cliente}%`
+        };
       }
 
       const { count, rows } = await Cita.findAndCountAll({
         where,
         include: [{
-          model: Cliente,
-          as: 'cliente',
-          attributes: ['nombre', 'apellido', 'documento']
-        }, {
           model: Usuario,
-          attributes: ['id', 'nombre', 'apellido', 'entidad']
+          attributes: ['Id_Usuario', 'Nombre', 'Apellido', 'Entidad']
         }],
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['fecha', 'ASC'], ['hora', 'ASC']]
+        order: [['Fecha_cita', 'ASC']]
       });
 
       return res.json({
@@ -49,13 +47,9 @@ const citaController = {
     try {
       const cita = await Cita.findByPk(req.params.id, {
         include: [{
-          model: Cliente,
-          as: 'cliente',
-          attributes: ['nombre', 'apellido', 'documento']
-        }, {
           model: Usuario,
-          attributes: ['id', 'nombre', 'apellido', 'entidad']
-        }],
+          attributes: ['Id_Usuario', 'Nombre', 'Apellido', 'Entidad']
+        }]
       });
 
       if (!cita) {
@@ -71,33 +65,41 @@ const citaController = {
 
   async create(req, res) {
     try {
-      const { cliente_id, fecha, hora } = req.body;
+      const { 
+        Entidad, 
+        Servicio_Agendado, 
+        Fecha_cita, 
+        Observaciones, 
+        Identificacion_Cliente,
+        Usuarios_Id_Usuarios
+      } = req.body;
 
-      const cliente = await Cliente.findByPk(cliente_id);
-      if (!cliente) {
-        return res.status(404).json({ error: 'Cliente no encontrado' });
+      // Verificar que el usuario existe
+      const usuario = await Usuario.findByPk(Usuarios_Id_Usuarios);
+      if (!usuario) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
       }
 
-      const existingCita = await Cita.checkExistingAppointment(fecha, hora);
+      // Verificar si ya existe una cita para esa fecha
+      const existingCita = await Cita.checkExistingAppointment(Fecha_cita);
       if (existingCita) {
-        return res.status(400).json({ error: 'Ya existe una cita para esta fecha y hora' });
+        return res.status(400).json({ error: 'Ya existe una cita para esta fecha' });
       }
 
       const cita = await Cita.create({
-        cliente_id,
-        fecha,
-        hora,
-        estado: 'PENDING'
+        Entidad,
+        Servicio_Agendado,
+        Fecha_cita,
+        Observaciones,
+        Identificacion_Cliente,
+        Usuarios_Id_Usuarios
       });
 
-      const citaConRelaciones = await Cita.findByPk(cita.id, {
+      const citaConRelaciones = await Cita.findByPk(cita.Id_cita, {
         include: [{
-          model: Cliente,
-          attributes: ['id', 'nombre', 'apellido', 'documento']
-        }, {
           model: Usuario,
-          attributes: ['id', 'nombre', 'apellido', 'entidad']
-        }],
+          attributes: ['Id_Usuario', 'Nombre', 'Apellido', 'Entidad']
+        }]
       });
 
       return res.status(201).json({
@@ -112,31 +114,50 @@ const citaController = {
 
   async update(req, res) {
     try {
-      const { fecha, hora } = req.body;
-      const cita = await Cita.findByPk(req.params.id);
+      const { 
+        Entidad, 
+        Servicio_Agendado, 
+        Fecha_cita, 
+        Observaciones, 
+        Identificacion_Cliente,
+        Usuarios_Id_Usuarios
+      } = req.body;
 
+      const cita = await Cita.findByPk(req.params.id);
       if (!cita) {
         return res.status(404).json({ error: 'Cita no encontrada' });
       }
 
-      const existingCita = await Cita.checkExistingAppointment(fecha, hora, req.params.id);
-      if (existingCita) {
-        return res.status(400).json({ error: 'Ya existe una cita para esta fecha y hora' });
+      // Verificar que el usuario existe si se está actualizando
+      if (Usuarios_Id_Usuarios) {
+        const usuario = await Usuario.findByPk(Usuarios_Id_Usuarios);
+        if (!usuario) {
+          return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+      }
+
+      // Verificar si ya existe otra cita para esa fecha
+      if (Fecha_cita) {
+        const existingCita = await Cita.checkExistingAppointment(Fecha_cita, req.params.id);
+        if (existingCita) {
+          return res.status(400).json({ error: 'Ya existe una cita para esta fecha' });
+        }
       }
 
       await cita.update({
-        fecha,
-        hora
+        Entidad,
+        Servicio_Agendado,
+        Fecha_cita,
+        Observaciones,
+        Identificacion_Cliente,
+        Usuarios_Id_Usuarios
       });
 
-      const citaActualizada = await Cita.findByPk(cita.id, {
+      const citaActualizada = await Cita.findByPk(cita.Id_cita, {
         include: [{
-          model: Cliente,
-          attributes: ['id', 'nombre', 'apellido', 'documento']
-        }, {
           model: Usuario,
-          attributes: ['id', 'nombre', 'apellido', 'entidad']
-        }],
+          attributes: ['Id_Usuario', 'Nombre', 'Apellido', 'Entidad']
+        }]
       });
 
       return res.json({
@@ -164,56 +185,21 @@ const citaController = {
     }
   },
 
-  async getByCliente(req, res) {
+  async getByFecha(req, res) {
     try {
+      const { fecha } = req.params;
       const { page = 1, limit = 10 } = req.query;
       const offset = (page - 1) * limit;
 
-      const cliente = await Cliente.findByPk(req.params.clienteId);
-      if (!cliente) {
-        return res.status(404).json({ error: 'Cliente no encontrado' });
-      }
-
       const { count, rows } = await Cita.findAndCountAll({
-        where: { cliente_id: req.params.clienteId },
-        limit: parseInt(limit),
-        offset: parseInt(offset),
-        order: [['fecha', 'DESC'], ['hora', 'DESC']]
-      });
-
-      return res.json({
-        data: rows,
-        pagination: {
-          total: count,
-          page: parseInt(page),
-          limit: parseInt(limit),
-          totalPages: Math.ceil(count / limit)
-        }
-      });
-    } catch (error) {
-      console.error('Error al obtener citas del cliente:', error);
-      return res.status(500).json({ error: 'Error al obtener citas del cliente' });
-    }
-  },
-
-  async getByFecha(req, res) {
-    try {
-      const { fecha, page = 1, limit = 10 } = req.query;
-      const offset = (page - 1) * limit;
-
-      const { count, rows } = await Cita.findAndCountAll({
-        where: { fecha },
+        where: { Fecha_cita: fecha },
         include: [{
-          model: Cliente,
-          as: 'cliente',
-          attributes: ['nombre', 'apellido', 'documento']
-        }, {
           model: Usuario,
-          attributes: ['id', 'nombre', 'apellido', 'entidad']
+          attributes: ['Id_Usuario', 'Nombre', 'Apellido', 'Entidad']
         }],
         limit: parseInt(limit),
         offset: parseInt(offset),
-        order: [['hora', 'ASC']]
+        order: [['Fecha_cita', 'ASC']]
       });
 
       return res.json({
@@ -236,10 +222,6 @@ const citaController = {
       const citas = await Cita.findAll({
         include: [
           {
-            model: Cliente,
-            attributes: ['id', 'nombre', 'apellido', 'email']
-          },
-          {
             model: Usuario,
             attributes: ['id', 'nombre', 'apellido', 'entidad']
           }
@@ -260,10 +242,6 @@ const citaController = {
         },
         include: [
           {
-            model: Cliente,
-            attributes: ['id', 'nombre', 'apellido', 'email']
-          },
-          {
             model: Usuario,
             attributes: ['id', 'nombre', 'apellido', 'entidad']
           }
@@ -272,6 +250,42 @@ const citaController = {
       res.json(citas);
     } catch (error) {
       res.status(500).json({ mensaje: 'Error al buscar citas', error: error.message });
+    }
+  },
+
+  async getByIdentificacion(req, res) {
+    try {
+      const { identificacion } = req.params;
+      const { page = 1, limit = 10 } = req.query;
+      const offset = (page - 1) * limit;
+
+      const { count, rows } = await Cita.findAndCountAll({
+        where: {
+          Identificacion_Cliente: {
+            [Op.like]: `%${identificacion}%`
+          }
+        },
+        include: [{
+          model: Usuario,
+          attributes: ['Id_Usuario', 'Nombre', 'Apellido', 'Entidad']
+        }],
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        order: [['Fecha_cita', 'DESC']]
+      });
+
+      return res.json({
+        data: rows,
+        pagination: {
+          total: count,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: Math.ceil(count / limit)
+        }
+      });
+    } catch (error) {
+      console.error('Error al obtener citas por identificación:', error);
+      return res.status(500).json({ error: 'Error al obtener citas por identificación' });
     }
   }
 };

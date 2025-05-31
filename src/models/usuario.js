@@ -2,6 +2,8 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../config/database.js';
 import bcrypt from 'bcryptjs';
 
+const SALT_ROUNDS = 10;
+
 const Usuario = sequelize.define('Usuario', {
   Id_Usuario: {
     type: DataTypes.INTEGER,
@@ -29,15 +31,15 @@ const Usuario = sequelize.define('Usuario', {
     allowNull: true
   },
   Tipo_Usuario: {
-    type: DataTypes.STRING(10),
+    type: DataTypes.STRING(30),
     allowNull: true
   },
   Estado_Usuario: {
-    type: DataTypes.STRING(10),
+    type: DataTypes.STRING(30),
     allowNull: true
   },
   Contraseña: {
-    type: DataTypes.STRING(45),
+    type: DataTypes.STRING(100),
     allowNull: true
   }
 }, {
@@ -46,14 +48,12 @@ const Usuario = sequelize.define('Usuario', {
   hooks: {
     beforeCreate: async (usuario) => {
       if (usuario.Contraseña) {
-        const salt = await bcrypt.genSalt(10);
-        usuario.Contraseña = await bcrypt.hash(usuario.Contraseña, salt);
+        usuario.Contraseña = await bcrypt.hash(usuario.Contraseña, SALT_ROUNDS);
       }
     },
     beforeUpdate: async (usuario) => {
       if (usuario.changed('Contraseña')) {
-        const salt = await bcrypt.genSalt(10);
-        usuario.Contraseña = await bcrypt.hash(usuario.Contraseña, salt);
+        usuario.Contraseña = await bcrypt.hash(usuario.Contraseña, SALT_ROUNDS);
       }
     }
   }
@@ -61,7 +61,20 @@ const Usuario = sequelize.define('Usuario', {
 
 // Método para verificar contraseña
 Usuario.prototype.verifyPassword = async function(password) {
-  return await bcrypt.compare(password, this.Contraseña);
+  try {
+    console.log('verifyPassword - Iniciando verificación');
+    console.log('Contraseña a verificar:', password);
+
+    console.log('Hash almacenado:', this.Contraseña);
+    
+    const result = await bcrypt.compare(password, this.Contraseña);
+    console.log('Resultado de bcrypt.compare:', result);
+    
+    return result;
+  } catch (error) {
+    console.error('Error en verifyPassword:', error);
+    return false;
+  }
 };
 
 export default Usuario; 

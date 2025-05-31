@@ -14,8 +14,10 @@ router.post('/', citaController.create);
 router.put('/:id', citaController.update);
 router.delete('/:id', citaController.delete);
 
-// Rutas adicionales
-router.get('/cliente/:clienteId', citaController.getByCliente);
+// Ruta para obtener citas por fecha
 router.get('/fecha/:fecha', citaController.getByFecha);
+
+// Rutas adicionales
+router.get('/identificacion/:identificacion', citaController.getByIdentificacion);
 
 export default router;

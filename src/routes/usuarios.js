@@ -18,10 +18,10 @@ router.put('/perfil', usuarioController.updateProfile);
 router.post('/cambiar-password', usuarioController.changePassword);
 
 // Rutas que requieren rol de administrador
-router.get('/', roleMiddleware(['admin']), usuarioController.list);
-router.get('/:id', roleMiddleware(['admin']), usuarioController.getById);
-router.post('/', roleMiddleware(['admin']), usuarioController.create);
-router.put('/:id', roleMiddleware(['admin']), usuarioController.update);
-router.delete('/:id', roleMiddleware(['admin']), usuarioController.delete);
+router.get('/', roleMiddleware(['registrador', 'coordinador_enlace']), usuarioController.list);
+router.get('/:id', roleMiddleware(['registrador', 'coordinador_enlace']), usuarioController.getById);
+router.post('/', roleMiddleware(['registrador', 'coordinador_enlace']), usuarioController.create);
+router.put('/:id', roleMiddleware(['registrador', 'coordinador_enlace']), usuarioController.update);
+router.delete('/:id', roleMiddleware(['registrador']), usuarioController.delete);
 
 export default router;
